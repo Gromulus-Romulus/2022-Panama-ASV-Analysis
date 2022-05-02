@@ -1,0 +1,241 @@
+---
+title: "Diversity of Fungal Genera"
+date: '2022.04.29'
+author: 'Nathan Malamud'
+---
+
+```{r setup, include=FALSE}
+
+# markdown setup
+library(knitr)
+knitr::opts_chunk$set(echo = F) # dont print code
+knitr::opts_chunk$set(warning = F) # dont print warnings
+knitr::opts_chunk$set(message = F) # dont print messages
+knitr::opts_chunk$set(echo = TRUE)
+
+# other important libraries
+library(phyloseq)
+library(vegan)
+library(dplyr)
+library(reshape2)
+library(EcolUtils)
+library(spaa)
+library(ggplot2)
+library(ggpubr)
+library(tidyverse)
+
+# clear all objects from workspace
+rm(list = ls())
+
+asvtab <- readRDS('./asvtab.rds')
+metadata <- readRDS('./metadata.rds')
+guilds <- readRDS('./guilds.rds')
+itsphyseq <- readRDS('./itsphyseq.rds')
+
+# subset itsphyseq and metadata across soil and litter
+itsphyseq.soil = subset_samples(itsphyseq, Soil_Litter=="Soil")
+itsphyseq.litter = subset_samples(itsphyseq, Soil_Litter=="Litter")
+
+metadata.soil = subset(metadata, Soil_Litter=="Soil")
+metadata.litter = subset(metadata, Soil_Litter=="Litter")
+
+# subset asvs across functional guilds
+guilds.amf <- subset(guilds, Guild=="Arbuscular Mycorrhizal")
+asvs.amf <- guilds.amf$ASV_ID
+asvtab.amf <- subset(asvtab, ASV_ID %in% asvs.amf)
+
+guilds$groups[grepl("Saprotroph", guilds$Guild)] = "Saprotroph"
+guilds.sap <- subset(guilds, groups=="Saprotroph")
+asvs.sap <- guilds.sap$ASV_ID
+asvtab.sap <- subset(asvtab, ASV_ID %in% asvs.sap)
+
+guilds$groups[grepl("Plant Pathogen", guilds$Guild)] = "Plant Pathogen"
+guilds.pathogen <- subset(guilds, groups=="Plant Pathogen")
+asvs.pathogen <- guilds.pathogen$ASV_ID
+asvtab.pathogen <- subset(asvtab, ASV_ID %in% asvs.pathogen)
+
+# additional function for extracting figure legend
+library(gridExtra)
+g_legend<-function(a.gplot){
+    tmp <- ggplot_gtable(ggplot_build(a.gplot))
+    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+    legend <- tmp$grobs[[leg]]
+    legend
+}
+```
+
+```{r genbar function, include=F}
+
+make.genbar <- function (asvtab, metadata, samples, guilds, colors30, other.label="other") {
+  # Generates a bar chart for microbial genera. Colors not included!
+  # NOTE: converts reads to relative abundances.
+  
+  merged <- merge(guilds, asvtab, by="ASV_ID")
+  
+  merged.2 = asvtab[,c("Genus", samples)]
+  collapsed = aggregate(. ~Genus, data=merged.2, FUN=sum) # summarize the data for plotting
+  row.names(collapsed) = collapsed$Genus
+  collapsed = collapsed[,-1]
+  
+  fun = as.data.frame(t(collapsed)) 
+  fun = decostand(fun, 1, method = "total") # relative abundance using decostand.
+  
+  fun$Sample_ID=rownames(fun) # rename otu id names
+  fun=merge(fun, metadata, by="Sample_ID")
+  dframe <- melt(fun) # long format now each row is a rel abundance with its metadata
+  names(dframe)[4] <- "Genus"
+  names(dframe)[names(dframe) == "value"] <- "Abundance"
+  
+  # rename the groups
+  dframe$Genus=ifelse(is.na(dframe$Genus),"unidentified", as.character(dframe$Genus))
+  dframe$Genus=gsub(".*_","",dframe$Genus)
+  
+  # Filter out only the top 15 
+  dframe.genus <- dframe[, c("Genus", "Abundance")]
+  dframe.genus.collapsed = aggregate(.~Genus, data=dframe.genus, FUN=sum)
+  dframe.genus.collapsed <- dframe.genus.collapsed[order(-dframe.genus.collapsed$Abundance),]
+  
+  # Find the top 15 genera and specify that
+  # the "other" category is last
+  top15 <- as.vector(head(dframe.genus.collapsed, 15)$Genus)
+  
+  # group all other taxa in another bin
+  dframe$Genus.ordered = ifelse(
+    dframe$Genus %in% top15,
+    dframe$Genus,
+    other.label
+  )
+  
+  print(length(unique(dframe$Genus)))
+  
+  # Order the genera column alphabetically and give the "other" category a color
+  dframe$Genus.ordered <- factor(dframe$Genus.ordered, c(sort(top15), other.label))
+  colors30 <- c(colors30, "grey")
+  
+  # Create the plot
+  genus.plot = ggplot(dframe, aes(x = Tree_species, y = Abundance, fill = Genus.ordered)) + 
+    geom_bar(stat = "identity", position = "fill") + 
+    ylab("Relative Abundance") +
+    xlab("") +
+    scale_fill_manual(values=colors30) +
+    scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+    coord_cartesian(ylim = c(0.0, 1.0))+ # cutoff y value minimum
+    theme_classic() +
+    theme(legend.title=element_blank())+
+    theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust = .1))+
+    theme(strip.text.x = element_text(margin = margin(.05, 0, .05, 0, "cm")))+
+    theme(strip.text = element_text(colour = 'white'),
+          axis.line = element_line(colour = "black"),
+          text = element_text(size=18),
+          legend.text=element_text(size=14))
+  
+  return(genus.plot)
+}
+
+```
+
+```{r amf}
+
+# sample names for soil and litter
+names.amf.soil <- sample_names(subset_samples(
+                    subset_taxa(itsphyseq, ASV_ID %in% asvs.amf),
+                    Soil_Litter == "Soil"
+                    )
+                  )
+
+names.amf.litter <- sample_names(subset_samples(
+                    subset_taxa(itsphyseq, ASV_ID %in% asvs.amf),
+                    Soil_Litter == "Litter"
+                    )
+                  )
+  
+# manually set the colors for the plot. http://medialab.github.io/iwanthue/
+colors15 = c("#8499ff", "#6eb638", "#ab48b8",
+             "#018621", "#cc88ff", "#008839",
+             "#c60f72", "#005317", "#ff92d8",
+             "#798600", "#131f5f", "#ffce4a",
+             "#0060b1", "#e7d566", "#680058")
+  
+amfplot.s <- make.genbar(asvtab.amf, metadata.soil, names.amf.soil, guilds.amf, colors15)
+amfplot.l <- make.genbar(asvtab.amf, metadata.litter, names.amf.litter, guilds.amf, colors15)
+
+plot(amfplot.s)
+plot(amfplot.l)
+```
+
+```{r decomposers}
+
+# sample names for soil and litter
+names.sap.soil <- sample_names(subset_samples(
+                    subset_taxa(itsphyseq, ASV_ID %in% asvs.sap),
+                    Soil_Litter == "Soil"
+                    )
+                  )
+
+names.sap.litter <- sample_names(subset_samples(
+                    subset_taxa(itsphyseq, ASV_ID %in% asvs.sap),
+                    Soil_Litter == "Litter"
+                    )
+                  )
+
+colors15.s = c("#628ed6", "#9cb241", "#6971d7", "#c99135", "#543889",
+"#5bbc72", "#a2408e", "#43c8ac", "#d14a64", "#6b8b3a",
+"#c881d5", "#b67d47", "#9b3c40", "#c25137", "#bb4c7e") 
+
+colors15.l = c("#628ed6", "#9cb241", "#6971d7", "#c99135", "#543889",
+"#5bbc72", "#a2408e", "#43c8ac", "#d14a64", "#6b8b3a",
+"#c881d5", "#b67d47", "#bb4c7e", "#c25137", "#9b3c40") 
+
+sapplot.s <- make.genbar(asvtab.sap, metadata.soil, names.sap.soil, guilds.sap, colors15.s, "Other decomposers")
+sapplot.l <- make.genbar(asvtab.sap, metadata.litter, names.sap.litter, guilds.sap, colors15.l, "Other decomposers")
+
+plot(sapplot.s)
+plot(sapplot.l)
+```
+
+```{r pathogens}
+
+# sample names for soil and litter
+names.pathogen.soil <- sample_names(subset_samples(
+                    subset_taxa(itsphyseq, ASV_ID %in% asvs.pathogen),
+                    Soil_Litter == "Soil"
+                    )
+                  )
+
+names.pathogen.litter <- sample_names(subset_samples(
+                    subset_taxa(itsphyseq, ASV_ID %in% asvs.pathogen),
+                    Soil_Litter == "Litter"
+                    )
+                  )
+
+colors15.s = c("#7fcc49", "#947eeb", "#d5cb36", "#df6bcc","#e375a4",
+             "#82c862", "#6dcb87", "#c792d6", "#c5ba4f", "#6fa4df",
+             "#d7892d", "#5acfbc", "#e67553", "#c1b372", "#e2737d")
+
+colors15.l = c("#7fcc49", "#947eeb", "#d5cb36", "#df6bcc", "#82c862",
+"#e375a4", "#6dcb87", "#c792d6", "#c5ba4f", "#d7892d", "#6fa4df",
+"#5acfbc", "#e67553", "#c1b372", "#e2737d")
+
+pathogenplot.s <- make.genbar(asvtab.pathogen, metadata.soil, names.pathogen.soil, guilds.pathogen, colors15.s, "Other pathogens")
+pathogenplot.l <- make.genbar(asvtab.pathogen, metadata.litter, names.pathogen.litter, guilds.pathogen, colors15.l, "Other pathogens")
+
+plot(pathogenplot.s)
+plot(pathogenplot.l)
+```
+
+```{r save all plots separately}
+
+# Soil on the left, litter on the right
+amf.charts <- ggarrange(amfplot.s, amfplot.l,
+                           nrow=1, labels=c("A", "B"))
+
+sap.charts <- ggarrange(sapplot.s, sapplot.l,
+                        nrow=1, labels=c("C", "D"))
+
+pathogen.charts <- ggarrange(pathogenplot.s, pathogenplot.l,
+                       nrow=1, labels=c("E", "F"))
+                      
+ggsave(filename = "amf.charts.tiff", plot=amf.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "sap.charts.tiff", plot=sap.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "pathogen.charts.tiff", plot=pathogen.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+```

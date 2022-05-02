@@ -1,0 +1,187 @@
+---
+title: "NMDS Plots Visualizing Community Divergence"
+date: '2022.04.30'
+author: 'Nathan Malamud'
+---
+
+```{r setup}
+# markdown setup
+library(knitr)
+knitr::opts_chunk$set(echo = F) # dont print code
+knitr::opts_chunk$set(warning = F) # dont print warnings
+knitr::opts_chunk$set(message = F) # dont print messages
+knitr::opts_chunk$set(echo = TRUE)
+
+# other important libraries
+library(phyloseq)
+library(vegan)
+library(dplyr)
+library(reshape2)
+library(EcolUtils)
+library(spaa)
+library(ggplot2)
+library(ggpubr)
+library(tidyverse)
+
+# clear all objects from workspace
+rm(list = ls())
+
+asvtab <- readRDS('./asvtab.rds')
+metadata <- readRDS('./metadata.rds')
+guilds <- readRDS('./guilds.rds')
+itsphyseq <- readRDS('./itsphyseq.rds')
+
+# subset itsphyseq and metadata across soil and litter
+itsphyseq.soil = subset_samples(itsphyseq, Soil_Litter=="Soil")
+itsphyseq.litter = subset_samples(itsphyseq, Soil_Litter=="Litter")
+
+metadata.soil = subset(metadata, Soil_Litter=="Soil")
+metadata.litter = subset(metadata, Soil_Litter=="Litter")
+
+# subset asvs across functional guilds
+guilds.amf <- subset(guilds, Guild=="Arbuscular Mycorrhizal")
+asvs.amf <- guilds.amf$ASV_ID
+
+guilds$groups[grepl("Plant Pathogen", guilds$Guild)] = "Plant Pathogen"
+guilds.pathogen <- subset(guilds, groups=="Plant Pathogen")
+asvs.pathogen <- guilds.pathogen$ASV_ID
+
+guilds$groups[grepl("Saprotroph", guilds$Guild)] = "Saprotroph"
+guilds.sap <- subset(guilds, groups=="Saprotroph")
+asvs.sap <- guilds.sap$ASV_ID
+
+# Grabbin that legend
+library(gridExtra)
+g_legend<-function(a.gplot){
+    tmp <- ggplot_gtable(ggplot_build(a.gplot))
+    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+    legend <- tmp$grobs[[leg]]
+    legend
+}
+```
+
+```{r soil and litter}
+set.seed(111)
+nmds <- ordinate(
+  physeq = itsphyseq,
+  method = "NMDS",
+  formula = ~Soil_Litter,
+  distance = "bray"
+)
+
+sl=plot_ordination(
+  physeq = itsphyseq,
+  ordination = nmds,
+  color = "Soil_Litter",
+  title = "All Fungi across Soil and Litter"
+) + 
+  aes(group=Soil_Litter)+
+  geom_point(aes(color = Soil_Litter), size = 2) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),strip.text = element_text(colour = 'white'),text = element_text(size=12),legend.text=element_text(size=12),legend.title = element_blank())
+
+
+plot(sl)
+
+ggsave("soil.litter.ordination.tiff", plot=sl, width=5, height = 5, units="in", dpi=300, compression="lzw")
+```
+
+```{r tree plotting function}
+
+plot.across.trees <- function (physeq.obj, plot.title = "") {
+# This is a function that returns a plot of ASVs across tree species
+# Uses NMDS to generate ordination plots.
+#
+# Parameters:
+#   physeq_obj, a physeq object
+#   plot_title, a string of text
+#
+# Returns: an plot object.
+#
+  
+  set.seed(111)
+  nmds <- ordinate(
+    physeq = physeq.obj,
+    method = "NMDS",
+    formula = ~Tree_species,
+    distance = "bray"
+  )
+  
+  pl = plot_ordination(
+    physeq = physeq.obj,
+    ordination = nmds,
+    color = "Tree_species",
+    # label = "Sample_ID",
+    title = plot.title
+  ) + 
+    aes(group=Tree_species)+
+    geom_point(aes(color = Tree_species), size = 2) +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          panel.background = element_blank(), axis.line = element_line(colour = "black"),strip.text = element_text(colour = 'white'),text = element_text(size=12),legend.text=element_text(size=12),legend.title = element_blank())
+  
+  return(pl)
+}
+
+```
+
+```{r amf fungi, echo=F}
+itsphyseq.soil.amf <- subset_taxa(itsphyseq.soil, ASV_ID %in% asvs.amf)
+itsphyseq.litter.amf <- subset_taxa(itsphyseq.litter, ASV_ID %in% asvs.amf)
+
+# We need to prune out AMF samples that do not show up in soil or litter
+amfsoilPS <- prune_samples(sample_sums(itsphyseq.soil.amf)>0, itsphyseq.soil.amf)
+amflitterPS <- prune_samples(sample_sums(itsphyseq.litter.amf)>0, itsphyseq.litter.amf)
+
+amf.soil.plt = plot.across.trees(amfsoilPS, "AMF in Soil")
+amf.litter.plt = plot.across.trees(amflitterPS, "AMF in Litter")
+```
+
+```{r saprotrophic fungi}
+itsphyseq.soil.sap <- subset_taxa(itsphyseq.soil, ASV_ID %in% asvs.sap)
+itsphyseq.litter.sap <- subset_taxa(itsphyseq.litter, ASV_ID %in% asvs.sap)
+
+sap.soil.plt = plot.across.trees(itsphyseq.soil.sap, "Decomposers in Soil")
+sap.litter.plt = plot.across.trees(itsphyseq.litter.sap, "Decomposers in Litter")
+```
+
+```{r pathogenic fungi}
+itsphyseq.soil.pathogen <- subset_taxa(itsphyseq.soil, ASV_ID %in% asvs.pathogen)
+itsphyseq.litter.pathogen <- subset_taxa(itsphyseq.litter, ASV_ID %in% asvs.pathogen)
+
+# Remove outlier due to low read count
+pathogensoilPS <- subset_samples(itsphyseq.soil.pathogen, Sample_ID != "HITR_182HS")
+
+pathogen.soil.plt = plot.across.trees(pathogensoilPS, "Pathogens in Soil")
+pathogen.litter.plt = plot.across.trees(itsphyseq.litter.pathogen, "Pathogens in Litter")
+```
+
+```{r save all plots}
+# Soil on the left, litter on the right
+
+tree.legend = g_legend(amf.soil.plt)
+
+amf.charts <- ggarrange(amf.soil.plt + theme(legend.position="none"), NULL,
+                        amf.litter.plt + theme(legend.position="none"),
+                        tree.legend,
+                        nrow=1, ncol=4,
+                        widths=c(1, 0.05, 1, 0.5),
+                        labels=c("A", "", "B", ""))
+
+sap.charts <- ggarrange(sap.soil.plt + theme(legend.position="none"), NULL,
+                        sap.litter.plt + theme(legend.position="none"),
+                        tree.legend,
+                        nrow=1, ncol=4,
+                        widths=c(1, 0.05, 1, 0.5),
+                        labels=c("C", "", "D", ""))
+
+pathogen.charts <- ggarrange(pathogen.soil.plt + theme(legend.position="none"), NULL,
+                        pathogen.litter.plt + theme(legend.position="none"),
+                        tree.legend,
+                        nrow=1, ncol=4,
+                        widths=c(1, 0.05, 1, 0.5),
+                        labels=c("E", "", "F", ""))
+
+ggsave(filename = "amf.charts.tiff", plot=amf.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "sap.charts.tiff", plot=sap.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "pathogen.charts.tiff", plot=pathogen.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+```

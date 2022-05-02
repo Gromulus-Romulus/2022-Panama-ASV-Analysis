@@ -1,0 +1,207 @@
+---
+title: "B-dispr and Analysis of Variance"
+date: '2022.04.26'
+author: 'Nathan Malamud'
+---
+
+```{r setup, include=FALSE}
+
+# markdown setup
+library(knitr)
+knitr::opts_chunk$set(echo = F) # dont print code
+knitr::opts_chunk$set(warning = F) # dont print warnings
+knitr::opts_chunk$set(message = F) # dont print messages
+knitr::opts_chunk$set(echo = TRUE)
+
+# other important libraries
+library(phyloseq)
+library(vegan)
+library(dplyr)
+library(reshape2)
+library(EcolUtils)
+library(spaa)
+library(ggplot2)
+library(ggpubr)
+library(tidyverse)
+
+# clear all objects from workspace
+rm(list = ls())
+
+asvtab <- readRDS('./asvtab.rds')
+metadata <- readRDS('./metadata.rds')
+guilds <- readRDS('./guilds.rds')
+itsphyseq <- readRDS('./itsphyseq.rds')
+
+# subset itsphyseq and metadata across soil and litter
+itsphyseq.soil = subset_samples(itsphyseq, Soil_Litter=="Soil")
+itsphyseq.litter = subset_samples(itsphyseq, Soil_Litter=="Litter")
+
+metadata.soil = subset(metadata, Soil_Litter=="Soil")
+metadata.litter = subset(metadata, Soil_Litter=="Litter")
+
+# subset asvs across functional guilds
+guilds.amf <- subset(guilds, Guild=="Arbuscular Mycorrhizal")
+asvs.amf <- guilds.amf$ASV_ID
+asvtab.amf <- subset(asvtab, ASV_ID %in% asvs.amf)
+
+guilds$groups[grepl("Plant Pathogen", guilds$Guild)] = "Plant Pathogen"
+guilds.pathogen <- subset(guilds, groups=="Plant Pathogen")
+asvs.pathogen <- guilds.pathogen$ASV_ID
+
+guilds$groups[grepl("Saprotroph", guilds$Guild)] = "Saprotroph"
+guilds.sap <- subset(guilds, groups=="Saprotroph")
+asvs.sap <- guilds.sap$ASV_ID
+
+# additional function for extracting figure legend
+library(gridExtra)
+g_legend<-function(a.gplot){
+    tmp <- ggplot_gtable(ggplot_build(a.gplot))
+    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+    legend <- tmp$grobs[[leg]]
+    legend
+}
+```
+
+```{r stats functions, include=F}
+B.dispr <- function(physeq.obj) {
+  # Tests assumptions of the PERMANOVA test.
+  
+  #bray curtis dissimilarity matrix
+  bray <- phyloseq::distance(physeq.obj, method="bray")
+  sample.df <- data.frame(sample_data(physeq.obj))
+  # character = string of characters
+  # factor = categorical variable
+  # factor - interpret as a series of strings, not one big one
+  sample.df$Tree_species <- factor(sample.df$Tree_species,
+                                  levels = unique(sample.df$Tree_species)
+                           )
+  
+  betaD <- betadisper(bray, sample.df$Tree_species)
+  
+  return(betaD)
+  
+}
+
+pairwise.pnova <- function(physeq.obj, NP=1000) {
+  # Runs a pairwise permanova test (across tree species)
+  # and returns a pairwise adonis object.
+  
+  #bray curtis dissimilarity matrix
+  bray <- phyloseq::distance(physeq.obj, method="bray")
+  sample.df <- data.frame(sample_data(physeq.obj))
+  # character = string of characters
+  # factor = categorical variable
+  # factor - interpret as a series of strings, not one big one
+  sample.df$Tree_species <- factor(sample.df$Tree_species,
+                                  levels = unique(sample.df$Tree_species)
+                           )
+  
+  ppnova <- adonis.pair(bray, sample.df$Tree_species, nper = 999)
+
+  return(ppnova)
+}
+```
+
+```{r all fungi in soil and litter}
+# Bray dissimilarity matrix
+set.seed(1000)
+bray <- phyloseq::distance(itsphyseq, method="bray")
+
+.sampledf <- data.frame(sample_data(itsphyseq))
+pnova <- adonis(bray ~Soil_Litter, data = .sampledf)
+pnova
+```
+
+```{r amf fungi in soil}
+itsphyseq.soil.amf = subset_taxa(itsphyseq.soil, ASV_ID %in% asvs.amf)
+amfsoilPS <- prune_samples(sample_sums(itsphyseq.soil.amf)>0, itsphyseq.soil.amf)
+
+amf.bdispr = B.dispr(amfsoilPS)
+amf.tukey <- TukeyHSD(amf.bdispr)
+amf.ppnova = pairwise.pnova(amfsoilPS)
+boxplot(amf.bdispr, xlab="")
+
+amf.ppnova = pairwise.pnova(amfsoilPS)
+
+amf.ppnova
+amf.tukey
+```
+
+```{r amf fungi in litter}
+itsphyseq.litter.amf = subset_taxa(itsphyseq.litter, ASV_ID %in% asvs.amf)
+amflitterPS <- prune_samples(sample_sums(itsphyseq.litter.amf)>0, itsphyseq.litter.amf)
+
+amf.bdispr = B.dispr(amflitterPS)
+amf.tukey <- TukeyHSD(amf.bdispr)
+amf.ppnova = pairwise.pnova(amflitterPS)
+boxplot(amf.bdispr, xlab="")
+
+amf.ppnova = pairwise.pnova(amflitterPS)
+
+amf.ppnova
+amf.tukey
+```
+
+```{r sap fungi in soil}
+itsphyseq.soil.sap = subset_taxa(itsphyseq.soil, ASV_ID %in% asvs.sap)
+sapsoilPS <- prune_samples(sample_sums(itsphyseq.soil.sap)>0, itsphyseq.soil.sap)
+
+sap.bdispr = B.dispr(sapsoilPS)
+sap.tukey <- TukeyHSD(sap.bdispr)
+sap.ppnova = pairwise.pnova(sapsoilPS)
+boxplot(sap.bdispr, xlab="")
+
+sap.ppnova = pairwise.pnova(sapsoilPS)
+
+sap.ppnova
+sap.tukey
+
+```
+
+```{r sap fungi in litter}
+itsphyseq.litter.sap = subset_taxa(itsphyseq.litter, ASV_ID %in% asvs.sap)
+saplitterPS <- prune_samples(sample_sums(itsphyseq.litter.sap)>0, itsphyseq.litter.sap)
+
+sap.bdispr = B.dispr(saplitterPS)
+sap.tukey <- TukeyHSD(sap.bdispr)
+sap.ppnova = pairwise.pnova(saplitterPS)
+boxplot(sap.bdispr, xlab="")
+
+sap.ppnova = pairwise.pnova(saplitterPS)
+
+sap.ppnova
+amf.tukey
+```
+
+```{r pathogen fungi in soil}
+itsphyseq.soil.pathogen = subset_taxa(itsphyseq.soil, ASV_ID %in% asvs.pathogen)
+pathogensoilPS <- prune_samples(sample_sums(itsphyseq.soil.pathogen)>0, itsphyseq.soil.pathogen)
+
+# Remove outlier due to low read count
+pathogensoilPS <- subset_samples(itsphyseq.soil.pathogen, Sample_ID != "HITR_182HS")
+
+pathogen.bdispr = B.dispr(pathogensoilPS)
+pathogen.tukey <- TukeyHSD(pathogen.bdispr)
+pathogen.ppnova = pairwise.pnova(pathogensoilPS)
+boxplot(pathogen.bdispr, xlab="")
+
+pathogen.ppnova = pairwise.pnova(pathogensoilPS)
+
+pathogen.ppnova
+pathogen.tukey
+```
+
+```{r pathogen fungi in litter}
+itsphyseq.litter.pathogen = subset_taxa(itsphyseq.litter, ASV_ID %in% asvs.pathogen)
+pathogenlitterPS <- prune_samples(sample_sums(itsphyseq.litter.pathogen)>0, itsphyseq.litter.pathogen)
+
+pathogen.bdispr = B.dispr(pathogenlitterPS)
+pathogen.tukey <- TukeyHSD(pathogen.bdispr)
+pathogen.ppnova = pairwise.pnova(pathogenlitterPS)
+boxplot(pathogen.bdispr, xlab="")
+
+pathogen.ppnova = pairwise.pnova(pathogenlitterPS)
+
+pathogen.ppnova
+pathogen.tukey
+```

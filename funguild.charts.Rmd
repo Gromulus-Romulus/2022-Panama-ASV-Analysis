@@ -1,0 +1,155 @@
+---
+title: "Diversity of Functional Guilds"
+date: '2022.04.29'
+author: 'Nathan Malamud'
+---
+
+```{r setup, include=FALSE}
+
+# markdown setup
+library(knitr)
+knitr::opts_chunk$set(echo = F) # dont print code
+knitr::opts_chunk$set(warning = F) # dont print warnings
+knitr::opts_chunk$set(message = F) # dont print messages
+knitr::opts_chunk$set(echo = TRUE)
+
+# other important libraries
+library(phyloseq)
+library(vegan)
+library(dplyr)
+library(reshape2)
+library(EcolUtils)
+library(spaa)
+library(ggplot2)
+library(ggpubr)
+library(tidyverse)
+
+# clear all objects from workspace
+rm(list = ls())
+
+asvtab <- readRDS('./asvtab.rds')
+metadata <- readRDS('./metadata.rds')
+guilds <- readRDS('./guilds.rds')
+itsphyseq <- readRDS('./itsphyseq.rds')
+
+# subset itsphyseq and metadata across soil and litter
+itsphyseq.soil = subset_samples(itsphyseq, Soil_Litter=="Soil")
+itsphyseq.litter = subset_samples(itsphyseq, Soil_Litter=="Litter")
+
+metadata.soil = subset(metadata, Soil_Litter=="Soil")
+metadata.litter = subset(metadata, Soil_Litter=="Litter")
+
+# additional function for extracting figure legend
+library(gridExtra)
+g_legend<-function(a.gplot){
+    tmp <- ggplot_gtable(ggplot_build(a.gplot))
+    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+    legend <- tmp$grobs[[leg]]
+    legend
+}
+
+# manually set the colors for the plots. http://medialab.github.io/iwanthue/
+colors12 <- c("#d59563", "#0071cd", "#40b145",
+               "#b32592", "#0d5100", "#c597ff",
+               "#6e7e00", "lightgray", "#d85e25",
+               "#b7004f", "#865800", "#BEBEBE")
+```
+
+```{r funbar function, include=F}
+
+make.funbar <- function (asvtab, metadata, samples, guilds, colors12) {
+  # Generates a bar chart for functional groups. Colors not included!
+  # Returns an editable ggplot object.
+  # NOTE: Converts ASV reads to relative abundances.
+  
+  merged <- merge(guilds, asvtab, by="ASV_ID")
+  merged.2 = merged[,c("Guild", samples)]
+  collapsed = aggregate(. ~ Guild, data=merged.2, FUN=sum) # summarize the data for plotting
+  row.names(collapsed) = collapsed$Guild
+  collapsed = collapsed[,-1] 
+  
+  fun = as.data.frame(t(collapsed)) 
+  fun = decostand(fun, 1, method = "total") # relative abundance using decostand.
+  
+  fun$Sample_ID=rownames(fun) # rename otu id names
+  fun=merge(fun, metadata, by="Sample_ID")
+  dframe <- melt(fun) # long format now each row is a rel abundance with its metadata
+  names(dframe)[names(dframe) == "variable"] <- "Guild"
+  names(dframe)[names(dframe) == "value"] <- "Abundance"
+  
+  # Filter out NA cells.
+  dframe %>% drop_na(Abundance)
+  
+  # rename the groups
+  dframe$groups[grepl("-", dframe$Guild)] = "Unclassified"
+  dframe$groups[grepl("NULL", dframe$Guild)] = "Unclassified"
+  dframe$groups[grepl("Animal Endosymbiont", dframe$Guild)] = "Animal Endosymbiont"
+  dframe$groups[grepl("Plant Pathogen", dframe$Guild)] = "Plant Pathogen"
+  dframe$groups[grepl("Saprotroph", dframe$Guild)] = "Saprotroph"
+  dframe$groups[grepl("Lichen", dframe$Guild)] = "Lichen"
+  dframe$groups[grepl("^Endophyte", dframe$Guild)] = "Endophyte"
+  dframe$groups[grepl("Arbuscular Mycorrhizal" , dframe$Guild)] = "Arbuscular Mycorrhizal" 
+  dframe$groups[grepl("Epiphyte" , dframe$Guild)] = "Epiphyte"
+  dframe$groups[grepl("Ericoid Mycorrhizal" , dframe$Guild)] = "Ericoid Mycorrhizal" 
+  dframe$groups[grepl("Orchid" , dframe$Guild)] = "Ericoid Mycorrhizal" 
+  dframe$groups[grepl("Animal Pathogen" , dframe$Guild)] = "Animal Pathogen" 
+  dframe$groups[grepl("Animal Parasite-Fungal Parasite" , dframe$Guild)] = "Animal Parasite-Fungal Parasite" 
+  dframe$groups[grepl("Fungal Parasite" , dframe$Guild)] = "Fungal Parasite" 
+  dframe$groups[grepl("^Ectomycorrhizal" , dframe$Guild)] = "Ectomycorrhizal"
+  dframe$groups[grepl("Clavicipitaceous Endophyte", dframe$Guild)] = "Endophyte"
+  
+  # Just in case anything didn't get a group
+  dframe$groups <- replace_na(dframe$groups, "Unclassified") 
+  
+  funguild.plot = ggplot(dframe, aes(x = Tree_species, y = Abundance, fill = groups)) + 
+    geom_bar(stat = "identity", position = "fill") + 
+    ylab("Relative Abundance") +
+    xlab("") +
+    scale_fill_manual(values=colors12) +
+    scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+    coord_cartesian(ylim = c(0.5, 1.0))+ # cutoff y value minimum
+    theme_classic() +
+    theme(legend.title=element_blank())+
+    theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust = .1))+
+    theme(strip.text.x = element_text(margin = margin(.05, 0, .05, 0, "cm")))+
+    theme(strip.text = element_text(colour = 'white'),
+          axis.line = element_line(colour = "black"),
+          text = element_text(size=18),
+          legend.text=element_text(size=14))
+  
+  return(funguild.plot)
+}
+
+```
+
+```{r make figures, include=F}
+
+# Generate bar chart of functional guild composition
+fun.plot1 = make.funbar(asvtab, metadata, sample_names(itsphyseq), guilds, colors12)
+barpltsoil = make.funbar(asvtab, metadata.soil, sample_names(itsphyseq.soil), guilds, colors12)
+barpltlitter = make.funbar(asvtab, metadata.litter, sample_names(itsphyseq.litter), guilds, colors12)
+
+fun.legend <- g_legend(barpltsoil)
+fun.plot2 <- ggarrange(barpltsoil + theme(legend.position="none"),
+                       barpltlitter + theme(legend.position="none"),
+                       fun.legend,
+                       nrow=1, labels=c("A", "B", "")
+                      )
+
+ggsave(filename = "all.guilds.tiff",
+       plot=fun.plot1,
+       width=5.5, height = 25.0/6.0, units="in",
+       dpi=300, compression="lzw")
+
+ggsave(filename = "soil.litter.guilds.tiff",
+       plot=fun.plot2,
+       width=10, height = 25.0/6.0, units="in",
+       dpi=300, compression="lzw")
+```
+
+```{r plot, echo=F}
+plot(fun.plot1)
+plot(fun.plot2)
+```
+
+

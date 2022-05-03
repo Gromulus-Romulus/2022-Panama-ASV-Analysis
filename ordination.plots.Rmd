@@ -26,10 +26,10 @@ library(tidyverse)
 # clear all objects from workspace
 rm(list = ls())
 
-asvtab <- readRDS('./asvtab.rds')
-metadata <- readRDS('./metadata.rds')
-guilds <- readRDS('./guilds.rds')
-itsphyseq <- readRDS('./itsphyseq.rds')
+asvtab <- readRDS('./Data/asvtab.rds')
+metadata <- readRDS('./Data/metadata.rds')
+guilds <- readRDS('./Data/guilds.rds')
+itsphyseq <- readRDS('./Data/itsphyseq.rds')
 
 # subset itsphyseq and metadata across soil and litter
 itsphyseq.soil = subset_samples(itsphyseq, Soil_Litter=="Soil")
@@ -89,15 +89,15 @@ ggsave("soil.litter.ordination.tiff", plot=sl, width=5, height = 5, units="in", 
 ```{r tree plotting function}
 
 plot.across.trees <- function (physeq.obj, plot.title = "") {
-# This is a function that returns a plot of ASVs across tree species
-# Uses NMDS to generate ordination plots.
-#
-# Parameters:
-#   physeq_obj, a physeq object
-#   plot_title, a string of text
-#
-# Returns: an plot object.
-#
+  # This is a function that returns a plot of ASVs across tree species
+  # Uses NMDS to generate ordination plots.
+  #
+  # Parameters:
+  #   physeq_obj, a physeq object
+  #   plot_title, a string of text
+  #
+  # Returns: an plot object.
+  #
   
   set.seed(111)
   nmds <- ordinate(
@@ -107,18 +107,44 @@ plot.across.trees <- function (physeq.obj, plot.title = "") {
     distance = "bray"
   )
   
-  pl = plot_ordination(
-    physeq = physeq.obj,
-    ordination = nmds,
-    color = "Tree_species",
-    # label = "Sample_ID",
-    title = plot.title
-  ) + 
-    aes(group=Tree_species)+
-    geom_point(aes(color = Tree_species), size = 2) +
-    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-          panel.background = element_blank(), axis.line = element_line(colour = "black"),strip.text = element_text(colour = 'white'),text = element_text(size=12),legend.text=element_text(size=12),legend.title = element_blank())
+  # create dataframe of scores + covariates
+  nmds.scores <- as.data.frame(scores(nmds))
+  nmds.scores$Tree_species <- physeq.obj@sam_data$Tree_species
+  physeq.obj@sam_data$Tree_species <- as.factor(physeq.obj@sam_data$Tree_species)
   
+  # calculating means and sd's to get centroid + error bars
+  means1 <- aggregate(nmds.scores$NMDS1,
+                      by = list(nmds.scores$Tree_species),
+                      FUN = mean)
+
+  means2 <- aggregate(nmds.scores$NMDS2,
+                      by = list(nmds.scores$Tree_species),
+                      FUN = mean)
+
+  sd1 <- aggregate(nmds.scores$NMDS1,
+                      by = list(nmds.scores$Tree_species),
+                      FUN = mean)
+
+  sd2 <- aggregate(nmds.scores$NMDS2,
+                      by = list(nmds.scores$Tree_species),
+                      FUN = sd)
+
+  centroids <- data.frame("means1" = means1$x, "means2" = means2$x,
+                          "sd1" = sd1$x, "sd2" = sd2$x,
+                          "Tree_species"=means1$Group.1)
+  
+  nmds.scores$Tree_species <- as.factor(nmds.scores$Tree_species)
+  centroids$Tree_species <- as.factor(centroids$Tree_species)
+
+  # plotting!
+  pl = ggplot(data = nmds.scores, aes(x = NMDS1, y = NMDS2, color = Tree_species)) +
+    geom_point(alpha = 0.3) + 
+    geom_errorbar(data = centroids, aes(x = means1, y = means2, ymin = means2 - sd2, ymax = means2 + sd2)) +
+    geom_errorbar(data = centroids, aes(x = means1, y = means2, xmin = means1 - sd1, xmax = means1 + sd1)) +
+    geom_point(data = centroids, aes(x = means1, y = means2, color = Tree_species), size = 5) +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),strip.text = element_text(colour = 'white'),text = element_text(size=12),legend.text=element_text(size=12),legend.title = element_blank())
+
   return(pl)
 }
 
@@ -134,6 +160,9 @@ amflitterPS <- prune_samples(sample_sums(itsphyseq.litter.amf)>0, itsphyseq.litt
 
 amf.soil.plt = plot.across.trees(amfsoilPS, "AMF in Soil")
 amf.litter.plt = plot.across.trees(amflitterPS, "AMF in Litter")
+
+plot(amf.soil.plt)
+plot(amf.litter.plt)
 ```
 
 ```{r saprotrophic fungi}
@@ -142,6 +171,9 @@ itsphyseq.litter.sap <- subset_taxa(itsphyseq.litter, ASV_ID %in% asvs.sap)
 
 sap.soil.plt = plot.across.trees(itsphyseq.soil.sap, "Decomposers in Soil")
 sap.litter.plt = plot.across.trees(itsphyseq.litter.sap, "Decomposers in Litter")
+
+plot(sap.soil.plt)
+plot(sap.litter.plt)
 ```
 
 ```{r pathogenic fungi}
@@ -153,6 +185,9 @@ pathogensoilPS <- subset_samples(itsphyseq.soil.pathogen, Sample_ID != "HITR_182
 
 pathogen.soil.plt = plot.across.trees(pathogensoilPS, "Pathogens in Soil")
 pathogen.litter.plt = plot.across.trees(itsphyseq.litter.pathogen, "Pathogens in Litter")
+
+plot(pathogen.soil.plt)
+plot(pathogen.litter.plt)
 ```
 
 ```{r save all plots}
@@ -181,7 +216,7 @@ pathogen.charts <- ggarrange(pathogen.soil.plt + theme(legend.position="none"), 
                         widths=c(1, 0.05, 1, 0.5),
                         labels=c("E", "", "F", ""))
 
-ggsave(filename = "amf.charts.tiff", plot=amf.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
-ggsave(filename = "sap.charts.tiff", plot=sap.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
-ggsave(filename = "pathogen.charts.tiff", plot=pathogen.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "Figures/amf.charts.tiff", plot=amf.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "Figures/sap.charts.tiff", plot=sap.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "Figures/pathogen.charts.tiff", plot=pathogen.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
 ```

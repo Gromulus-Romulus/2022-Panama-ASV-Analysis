@@ -27,10 +27,10 @@ library(tidyverse)
 # clear all objects from workspace
 rm(list = ls())
 
-asvtab <- readRDS('./asvtab.rds')
-metadata <- readRDS('./metadata.rds')
-guilds <- readRDS('./guilds.rds')
-itsphyseq <- readRDS('./itsphyseq.rds')
+asvtab <- readRDS('./Data/asvtab.rds')
+metadata <- readRDS('./Data/metadata.rds')
+guilds <- readRDS('./Data/guilds.rds')
+itsphyseq <- readRDS('./Data/itsphyseq.rds')
 
 # subset itsphyseq and metadata across soil and litter
 itsphyseq.soil = subset_samples(itsphyseq, Soil_Litter=="Soil")

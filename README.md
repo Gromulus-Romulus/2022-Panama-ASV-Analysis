@@ -23,3 +23,6 @@ However, `phyloseq` and `EcolUtils` require special instructions for installatio
 * Installing `EcolUtils`: https://github.com/GuillemSalazar/EcolUtils
 
 You may also want to consider installing RStudio, since most of the code files are written in R markdown (`.Rmd` format).
+
+If you'd like to view the thesis I wrote, you can download on the U of O Scholars Bank (https://scholarsbank.uoregon.edu/xmlui/handle/1794/27369).
+I've also attached it to this repository for easy access.

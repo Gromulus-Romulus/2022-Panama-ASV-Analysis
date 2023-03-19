@@ -8,9 +8,9 @@ author: 'Nathan Malamud'
 
 # markdown setup
 library(knitr)
-knitr::opts_chunk$set(echo = F) # dont print code
-knitr::opts_chunk$set(warning = F) # dont print warnings
-knitr::opts_chunk$set(message = F) # dont print messages
+knitr::opts_chunk$set(echo = F) # Don't print code
+knitr::opts_chunk$set(warning = F) # Don't print warnings
+knitr::opts_chunk$set(message = F) # Don't print messages
 knitr::opts_chunk$set(echo = TRUE)
 
 # other important libraries
@@ -27,10 +27,10 @@ library(tidyverse)
 # clear all objects from workspace
 rm(list = ls())
 
-asvtab <- readRDS('./asvtab.rds')
-metadata <- readRDS('./metadata.rds')
-guilds <- readRDS('./guilds.rds')
-itsphyseq <- readRDS('./itsphyseq.rds')
+asvtab <- readRDS('./Data/asvtab.rds')
+metadata <- readRDS('./Data/metadata.rds')
+guilds <- readRDS('./Data/guilds.rds')
+itsphyseq <- readRDS('./Data/itsphyseq.rds')
 
 # subset itsphyseq and metadata across soil and litter
 itsphyseq.soil = subset_samples(itsphyseq, Soil_Litter=="Soil")
@@ -100,6 +100,7 @@ pairwise.pnova <- function(physeq.obj, NP=1000) {
 
   return(ppnova)
 }
+
 ```
 
 ```{r all fungi in soil and litter}

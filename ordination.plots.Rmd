@@ -7,12 +7,12 @@ author: 'Nathan Malamud'
 ```{r setup}
 # markdown setup
 library(knitr)
-knitr::opts_chunk$set(echo = F) # dont print code
-knitr::opts_chunk$set(warning = F) # dont print warnings
-knitr::opts_chunk$set(message = F) # dont print messages
+knitr::opts_chunk$set(echo = F) # Don't print code
+knitr::opts_chunk$set(warning = F) # Don't print warnings
+knitr::opts_chunk$set(message = F) # Don't print messages
 knitr::opts_chunk$set(echo = TRUE)
 
-# other important libraries
+# Other important libraries
 library(phyloseq)
 library(vegan)
 library(dplyr)
@@ -23,7 +23,7 @@ library(ggplot2)
 library(ggpubr)
 library(tidyverse)
 
-# clear all objects from workspace
+# Clear all objects from workspace
 rm(list = ls())
 
 asvtab <- readRDS('./Data/asvtab.rds')
@@ -80,7 +80,6 @@ sl=plot_ordination(
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black"),strip.text = element_text(colour = 'white'),text = element_text(size=12),legend.text=element_text(size=12),legend.title = element_blank())
 
-
 plot(sl)
 
 ggsave("soil.litter.ordination.tiff", plot=sl, width=5, height = 5, units="in", dpi=300, compression="lzw")
@@ -107,8 +106,9 @@ plot.across.trees <- function (physeq.obj, plot.title = "") {
     distance = "bray"
   )
   
-  # create dataframe of scores + covariates
-  nmds.scores <- as.data.frame(scores(nmds))
+  # Create dataframe of scores + covariates
+  # Only want scores to return values for "sites"
+  nmds.scores <- as.data.frame(scores(nmds, display="sites"))
   nmds.scores$Tree_species <- physeq.obj@sam_data$Tree_species
   physeq.obj@sam_data$Tree_species <- as.factor(physeq.obj@sam_data$Tree_species)
   
@@ -190,7 +190,7 @@ plot(pathogen.soil.plt)
 plot(pathogen.litter.plt)
 ```
 
-```{r save all plots}
+```{r save all plots, include=False, results='hide', echo=F}
 # Soil on the left, litter on the right
 
 tree.legend = g_legend(amf.soil.plt)

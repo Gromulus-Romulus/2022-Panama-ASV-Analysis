@@ -15,13 +15,11 @@ library(reshape2)
 library(spaa)
 library(tidyverse)
 
-# Define source files here
+# Define source files here (may not be in repo, ask for access to text files)
 ASV.F = "./PanamaMicSig_ITS_fwdASVtabVT.txt" # ASV table
 META.F = "./Panama_micsig_metadata.csv" # Sample metadata
 GUILD.F = "./PanamaMicSig_fwd_funguild.guilds.txt" # FunGUILD output
 
-
-# TODO - unknown columns error
 build.phyloseq <- function (metadata, asvtab) {
   # Handles all of the grunt work for building a phyloseq object.
   #
@@ -46,7 +44,6 @@ build.phyloseq <- function (metadata, asvtab) {
   # Remove duplicate Sample IDs
   filter_meta = metadata %>% distinct(Sample_ID, .keep_all = TRUE)
   
-  
   # Set our rownames and get the sample names
   # into the same order as the ASV table
   rownames(filter_meta) = filter_meta$Sample_ID
@@ -56,7 +53,7 @@ build.phyloseq <- function (metadata, asvtab) {
   # so that we can build our phyloseq object
   tax.matrix=as.matrix(map2[,1:8])
   
-  # otu_table is equivalent to asv_table here, don't worry about it
+  # Newly created ASV table and Taxa
   ASV = otu_table(map3, taxa_are_rows = TRUE)
   TAX = tax_table(tax.matrix)
   
@@ -65,7 +62,7 @@ build.phyloseq <- function (metadata, asvtab) {
                                       row.names=sample_names(physeq.obj),
                                       stringsAsFactors=FALSE))
   
-  # Almost done, just need to prune it, and tada!
+  # Almost done, just need to prune it, and ta-da!
   physeq.obj = phyloseq(ASV,TAX,samples)
   physeq.obj <- prune_samples(sample_sums(physeq.obj) > 0, physeq.obj)
   
@@ -91,6 +88,8 @@ colnames(asvtab)[1] <- "ASV_ID"
 itsphyseq <- build.phyloseq(metadata, asvtab)
 
 # Package in separate .rds files - to be accessed in other scripts
+# Serialized data format allows for low memory storage and easy file I/O
+# All files saved in Data folder
 saveRDS(asvtab, './asvtab.rds')
 saveRDS(metadata, './metadata.rds')
 saveRDS(guilds, './guilds.rds')

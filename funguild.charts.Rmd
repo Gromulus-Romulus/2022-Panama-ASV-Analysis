@@ -8,9 +8,9 @@ author: 'Nathan Malamud'
 
 # markdown setup
 library(knitr)
-knitr::opts_chunk$set(echo = F) # dont print code
-knitr::opts_chunk$set(warning = F) # dont print warnings
-knitr::opts_chunk$set(message = F) # dont print messages
+knitr::opts_chunk$set(echo = F) # Don't print code
+knitr::opts_chunk$set(warning = F) # Don't print warnings
+knitr::opts_chunk$set(message = F) # Don't print messages
 knitr::opts_chunk$set(echo = TRUE)
 
 # other important libraries
@@ -59,6 +59,7 @@ colors12 <- c("#d59563", "#0071cd", "#40b145",
 
 make.funbar <- function (asvtab, metadata, samples, guilds, colors12) {
   # Generates a bar chart for functional groups. Colors not included!
+  # Must provide colors as an array of values for parameter colors12.
   # Returns an editable ggplot object.
   # NOTE: Converts ASV reads to relative abundances.
   
@@ -80,7 +81,7 @@ make.funbar <- function (asvtab, metadata, samples, guilds, colors12) {
   # Filter out NA cells.
   dframe %>% drop_na(Abundance)
   
-  # rename the groups
+  # Rename the groups using grep
   dframe$groups[grepl("-", dframe$Guild)] = "Unclassified"
   dframe$groups[grepl("NULL", dframe$Guild)] = "Unclassified"
   dframe$groups[grepl("Animal Endosymbiont", dframe$Guild)] = "Animal Endosymbiont"

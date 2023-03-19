@@ -9,7 +9,7 @@ Other dependencies: `vegan`, `spaa`, and `EcolUtils` were used for ordination an
 
 Each of the `.Rmd` files does a separate statistical analysis:
 - `funguild.charts.Rmd` visualizes relative abundances of ecological guilds (determined prior via FunGUILD classification).
-- `genera.charts.Rmd` visualizes relatie abundances of fungal genera.
+- `genera.charts.Rmd` visualizes relative abundances of fungal genera.
 - `ordination.plots.Rmd` uses non-metric multidimensional scaling (NMDS) to produce ordination plots of community divergence.
 - `permanova.Rmd` uses a pairwise PERMANOVA test to confirm community divergence. Assumptions are tested using Beta-dispersion.
 

@@ -26,3 +26,7 @@ You may also want to consider installing RStudio, since most of the code files a
 
 If you'd like to view the thesis I wrote, you can download on the U of O Scholars Bank (https://scholarsbank.uoregon.edu/xmlui/handle/1794/27369).
 I've also attached it to this repository for easy access.
+
+## Acknowledgements:
+
+I'd like to thank Dr. Kaye Shek, Univ. of Oregon colleague and fellow McGuire lab member, for all of her mentorship and for teaching me the theoretical and practical fundamentals of using these R packages. Her mentorship, in addition to that of Professor Krista McGuire, has greatly inspired me in this new and exciting path on the road of science. In addition, Ph.D. student and mentor Jeremy Collings in the Professor Diez's lab provided me the skeleton R code for adding centroids to the NMDS plots. Much gratitude to all, hope you are doing very well.

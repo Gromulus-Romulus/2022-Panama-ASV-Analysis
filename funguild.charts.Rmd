@@ -58,8 +58,8 @@ colors12 <- c("#d59563", "#0071cd", "#40b145",
 ```{r funbar function, include=F}
 
 make.funbar <- function (asvtab, metadata, samples, guilds, colors12) {
-  # Generates a bar chart for functional groups. Colors not included!
-  # Must provide colors as an array of values for parameter colors12.
+  # Generates a bar chart for functional groups. Chart colors not included by default.
+  # Must provide colors as function parameter - an array of values for parameter colors12.
   # Returns an editable ggplot object.
   # NOTE: Converts ASV reads to relative abundances.
   

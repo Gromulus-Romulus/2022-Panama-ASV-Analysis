@@ -86,7 +86,7 @@ pairwise.pnova <- function(physeq.obj, NP=1000) {
   # Runs a pairwise permanova test (across tree species)
   # and returns a pairwise adonis object.
   
-  #bray curtis dissimilarity matrix
+  # bray curtis dissimilarity matrix
   bray <- phyloseq::distance(physeq.obj, method="bray")
   sample.df <- data.frame(sample_data(physeq.obj))
   # character = string of characters

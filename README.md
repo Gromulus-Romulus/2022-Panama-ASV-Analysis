@@ -1,6 +1,6 @@
 # 2022-Panama-ASV-Analysis
 
-The code here analyzes data from an ASV table of the ITS gene region.
+The code here analyzes data from an ASV table of the ITS gene region. The ITS gene region is used here as a genetic barcode to distinguish over 16 thousand different fungal genera isolated from soil samples in Barro Colorado, Panama.
 Sequence variants and sample metadata were provided by the McGuire Lab at the University of Oregon (IE2).
 
 `phyloseq` package was used to handle ASV data. `./Data/setup.R` imports all data and writes them to `.Rds` files, which are easily importable into other r scripts.

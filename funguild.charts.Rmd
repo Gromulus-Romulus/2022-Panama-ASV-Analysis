@@ -137,12 +137,12 @@ fun.plot2 <- ggarrange(barpltsoil + theme(legend.position="none"),
                        nrow=1, labels=c("A", "B", "")
                       )
 
-ggsave(filename = "all.guilds.tiff",
+ggsave(filename = "Figures/thesis.unused.all.guilds.tiff",
        plot=fun.plot1,
        width=5.5, height = 25.0/6.0, units="in",
        dpi=300, compression="lzw")
 
-ggsave(filename = "soil.litter.guilds.tiff",
+ggsave(filename = "Figures/thesis.figure1.soil.v.litter.tiff",
        plot=fun.plot2,
        width=10, height = 25.0/6.0, units="in",
        dpi=300, compression="lzw")

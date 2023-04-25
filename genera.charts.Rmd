@@ -237,7 +237,7 @@ sap.charts <- ggarrange(sapplot.s, sapplot.l,
 pathogen.charts <- ggarrange(pathogenplot.s, pathogenplot.l,
                        nrow=1, labels=c("E", "F"))
                       
-ggsave(filename = "amf.charts.tiff", plot=amf.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
-ggsave(filename = "sap.charts.tiff", plot=sap.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
-ggsave(filename = "pathogen.charts.tiff", plot=pathogen.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "Figures/thesis.fig2AB.amf.tiff", plot=amf.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "Figures/thesis.fig2CD.saps.tiff", plot=sap.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "Figures/thesis.fig2EF.pathogens.tiff", plot=pathogen.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
 ```

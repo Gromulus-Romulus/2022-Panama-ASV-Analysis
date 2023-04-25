@@ -82,7 +82,7 @@ sl=plot_ordination(
 
 plot(sl)
 
-ggsave("soil.litter.ordination.tiff", plot=sl, width=5, height = 5, units="in", dpi=300, compression="lzw")
+ggsave("Figures/thesis.fig3.tiff", plot=sl, width=5, height = 5, units="in", dpi=300, compression="lzw")
 ```
 
 ```{r tree plotting function}
@@ -216,7 +216,7 @@ pathogen.charts <- ggarrange(pathogen.soil.plt + theme(legend.position="none"), 
                         widths=c(1, 0.05, 1, 0.5),
                         labels=c("E", "", "F", ""))
 
-ggsave(filename = "Figures/amf.charts.tiff", plot=amf.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
-ggsave(filename = "Figures/sap.charts.tiff", plot=sap.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
-ggsave(filename = "Figures/pathogen.charts.tiff", plot=pathogen.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "Figures/thesis.fig4AB.amf.tiff", plot=amf.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "Figures/thesis.fig4CD.saps.tiff", plot=sap.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
+ggsave(filename = "Figures/thesis.fig4EF.pathogens.tiff", plot=pathogen.charts, width=10, height = 5, units="in", dpi=300, compression="lzw")
 ```
